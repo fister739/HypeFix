@@ -1,0 +1,121 @@
+Erweiterungen in index.html
+Füge eine Checkout-Seite hinzu und einen Button zum Weiter-Checkout im Warenkorb.
+Baue eine einfache Adresssektion auf der Checkout-Seite ein.
+Beispiel-Hinweis, wo du es einfügen kannst (innerhalb des Body nach den Produktlisten):
+
+<section id="checkout" class="container" style="display:none;"> <h2>Checkout</h2> <div id="checkoutSummary" class="card" style="padding:16px;"> <h3>Bestellübersicht</h3> <div id="checkoutItems"></div> <p id="checkoutTotals"></p> </div> <div class="card" style="margin-top:12px;padding:16px;"> <h3>Lieferadresse</h3> <form id="checkoutForm"> <label>Name<input type="text" name="name" required></label><br/> <label>Adresse<input type="text" name="address" required></label><br/> <label>Ort / PLZ<input type="text" name="city" required></label><br/> <label>E-Mail<input type="email" name="email" required></label><br/> <button type="submit" class="btn">Zahlungspflichtig bestellen</button> </form> </div> </section>
+Um den Checkout sichtbar zu machen, könntest du eine Funktion aufrufen, z.B. nach Klick auf “Weiter zur Kasse”.
+
+Erweiterungen in script.js
+Neue Funktionen: renderCheckout, aktualisiereCheckout, handleCheckoutSubmit, entfernePosition, updateTotals
+Verknüpfung des Buttons im Warenkorb mit dem Checkout
+Code-Snippet (ersetze oder ergänze deine bestehende script.js):
+
+// Bestehende Variablen aus dem vorherigen Code bleiben vorhanden:
+// produkte, warenkorb, etc.
+
+// Hilfsfunktion: Berechne Summen
+function berechneTotals(){
+const subtotal = warenkorb.reduce((sum, item) => sum + item.price * item.qty, 0);
+const versand = subtotal > 100 ? 0 : 6.99; // kostenlos ab 100 €
+const mwstRate = 0.19;
+const mwst = subtotal * mwstRate;
+const total = subtotal + versand + mwst;
+return { subtotal, versand, mwst, total };
+}
+
+// Checkout-Ansicht rendern
+function renderCheckout(){
+const container = document.getElementById('checkout');
+if(!container) return;
+const itemsEl = document.getElementById('checkoutItems');
+itemsEl.innerHTML = '';
+if(warenkorb.length === 0){
+itemsEl.innerHTML = '<p>Dein Warenkorb ist leer.</p>';
+} else {
+warenkorb.forEach(it => {
+const row = document.createElement('div');
+row.style.display = 'flex';
+row.style.justifyContent = 'space-between';
+row.style.marginBottom = '8px';
+row.innerHTML =         <span>${it.name} × ${it.qty}</span>         <span>${(it.price * it.qty).toFixed(2)} €</span>      ;
+itemsEl.appendChild(row);
+});
+}
+const totals = berechneTotals();
+document.getElementById('checkoutTotals').innerHTML =     <strong>Zwischensumme:</strong> ${totals.subtotal.toFixed(2)} €<br/>     <strong>Versand:</strong> ${totals.versand.toFixed(2)} €<br/>     <strong>MwSt (19%):</strong> ${totals.mwst.toFixed(2)} €<br/>     <strong>Gesamt:</strong> ${totals.total.toFixed(2)} €  ;
+}
+
+// Back-Page-Logik: Warenkorb-Übersicht aktualisieren
+function aktualisiereKorbAnzeige(){
+const count = warenkorb.reduce((sum, it) => sum + it.qty, 0);
+document.getElementById('korbCount').textContent = count;
+// Optional: wenn auf Checkout springen willst, öffne ihn jetzt
+}
+
+// Position aus Warenkorb entfernen oder Menge erhöhen
+function entfernePosition(id){
+warenkorb = warenkorb.filter(i => i.id !== id);
+aktualisiereKorbAnzeige();
+renderProdukte();
+renderCheckout();
+}
+
+function setzeMenge(id, delta){
+const item = warenkorb.find(i => i.id === id);
+if(!item) return;
+item.qty += delta;
+if(item.qty <= 0){
+entfernen(id);
+}
+aktualisiereKorbAnzeige();
+renderCheckout();
+}
+
+// Klick-Handler: Weiter zur Kasse
+function zurKasse(){
+// Zeige Checkout-Section
+document.getElementById('checkout').style.display = 'block';
+document.getElementById('produkte').style.display = 'none';
+renderCheckout();
+// Scrollen
+document.getElementById('checkout').scrollIntoView({behavior:'smooth'});
+}
+
+// Checkout-Formular verarbeiten
+document.getElementById('checkoutForm')?.addEventListener('submit', function(e){
+e.preventDefault();
+// Einfache Validierung
+const form = e.target;
+const data = new FormData(form);
+const name = data.get('name')?.trim();
+const address = data.get('address')?.trim();
+const city = data.get('city')?.trim();
+const email = data.get('email')?.trim();
+if(!name || !address || !city || !email){
+alert('Bitte fülle alle Felder aus.');
+return;
+}
+// Platzhalter-Bestätigung
+const totals = berechneTotals();
+alert(Danke, ${name}! Deine Bestellung über ${totals.total.toFixed(2)} € wurde aufgenommen. Eine Bestätigung wird an ${email} gesendet.);
+// Hier könnte man Bestell-IDs erstellen, Backend-Aufruf, etc.
+// Mock: Warenkorb leeren und Checkout verstecken
+warenkorb = [];
+aktualisiereKorbAnzeige();
+document.getElementById('checkout').style.display = 'none';
+document.getElementById('produkte').style.display = 'block';
+form.reset();
+renderProdukte();
+});
+
+// Initialisieren: vorhandene Funktionen verwenden
+function entferne(id){
+entfernePosition(id);
+}
+renderProdukte();
+aktualisiereKorbAnzeige();
+
+// Optional: Verknüpfe "In den Warenkorb" Button im Checkout mit Aktualisierung
+// Falls du einen Button "Zur Kasse" in der Produktliste hast, binde ihn so ein:
+// <button onclick="zurKasse()">Zur Kasse</button>
